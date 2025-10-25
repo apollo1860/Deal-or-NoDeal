@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <title>Deal or No Deal – Schluck-Edition</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --bg:#0e0f13; --panel:#161821; --accent:#ffd400; --accent2:#34d399; --danger:#ef4444;
+      --text:#e8eaf0; --muted:#a7b0c0; --btn:#222634; --btn-hover:#2b3042; --grid: min(1150px, 96vw);
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif;
+      background: radial-gradient(1200px 800px at 20% -10%, #1a1c26 0%, #0e0f13 60%);
+      color:var(--text);
+    }
+    .wrap{max-width:var(--grid); margin:0 auto; padding:24px}
+    header{
+      display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:12px;
+    }
+    .brand{display:flex; align-items:center; gap:12px}
+    .brand h1{font-size:20px; margin:0; font-weight:700; letter-spacing:.2px}
+    .badge{font-size:12px; color:var(--bg); background:var(--accent); padding:3px 8px; border-radius:999px; font-weight:700}
+    .info{
+      position:relative; width:36px; height:36px; border-radius:50%;
+      background:var(--btn); display:grid; place-items:center; cursor:pointer; user-select:none;
+      box-shadow:var(--shadow); border:1px solid #2a2f40;
+    }
+    .info:hover{background:var(--btn-hover)}
+    .info::after{content:"i"; font-weight:800; color:var(--text)}
+    .card{
+      background:linear-gradient(180deg, #151825, #10131d); border:1px solid #2a2f40; border-radius:14px; box-shadow:var(--shadow);
+      padding:20px;
+    }
+    .start{display:grid; gap:14px; max-width:520px; margin:40px auto}
+    .row{display:flex; gap:10px}
+    input[type="text"]{
+      width:100%; background:#0f1220; color:var(--text); border:1px solid #2a2f40; border-radius:10px; padding:14px 16px;
+      outline:none; font-size:16px;
+    }
+    button{
+      background:var(--btn); color:var(--text); border:1px solid #2a2f40; padding:12px 16px; border-radius:10px; cursor:pointer;
+      font-weight:600;
+    }
+    button.primary{background:var(--accent); color:#1b1700; border:none}
+    button.ghost{background:transparent; border:1px dashed #3a4054}
+    button:hover{background:var(--btn-hover)}
+    button.primary:hover{filter:saturate(1.1)}
+    .grid{
+      display:grid; grid-template-columns:repeat(4, 1fr); gap:14px; margin-top:14px;
+    }
+    .box{
+      background:linear-gradient(180deg, #2a2f40, #1e2435); border:1px solid #3a4054; border-radius:12px; height:80px;
+      display:grid; place-items:center; font-weight:800; font-size:24px; cursor:pointer; position:relative; transition:.15s transform ease;
+      user-select:none;
+    }
+    .box:hover{transform:translateY(-2px)}
+    .box.disabled{opacity:.35; pointer-events:none}
+    .box.opened{opacity:.2; text-decoration:line-through}
+    .stage{
+      display:grid; grid-template-columns:1fr; gap:10px; margin-top:14px; align-items:center;
+    }
+    .statusbar{
+      display:flex; gap:12px; align-items:center; flex-wrap:wrap; justify-content:space-between;
+    }
+    .youKeep{
+      display:grid; place-items:center; min-height:120px; border:1px dashed #3a4054; border-radius:12px; margin-top:12px;
+      background:rgba(255,255,255,.02);
+    }
+    .keepBox{
+      width:120px; height:90px; display:grid; place-items:center; border-radius:12px; background:linear-gradient(180deg,#ffd400,#ffb300);
+      color:#1b1700; font-weight:900; font-size:28px; border:2px solid #d79f00; box-shadow:var(--shadow)
+    }
+    .valuesPanel{
+      display:grid; grid-template-columns:1fr 1fr; gap:6px 18px; font-size:14px; margin-top:6px; color:var(--muted)
+    }
+    .val.gone{opacity:.35; text-decoration:line-through}
+    .floating-offer{
+      position:fixed; right:24px; bottom:24px; background:linear-gradient(180deg,#1a1f2d,#121622);
+      border:1px solid #2a2f40; border-radius:12px; padding:14px 16px; box-shadow:var(--shadow); display:none; z-index:5;
+    }
+    .swap{
+      margin-top:8px; display:flex; gap:8px; justify-content:center; align-items:center;
+    }
+    .swap button{border-color:#4c536b}
+    /* Modal */
+    .modalBackdrop{
+      position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; z-index:10;
+    }
+    .modal{background:#121623; border:1px solid #2a2f40; border-radius:14px; width:min(560px, 92vw); padding:18px;}
+    .modal h3{margin:6px 0 10px 0}
+    .modal .actions{display:flex; gap:8px; justify-content:flex-end; margin-top:12px}
+    .pill{display:inline-block; padding:4px 8px; border-radius:999px; font-size:12px; border:1px solid #3a4054; color:var(--muted)}
+    .right{margin-left:auto}
+    .muted{color:var(--muted)}
+    .win{color:var(--accent2); font-weight:800}
+    .lose{color:var(--danger); font-weight:800}
+    /* Info pop */
+    .infoCard{
+      position:fixed; top:16px; right:16px; z-index:20; width:min(420px,90vw); display:none;
+    }
+    .infoCard .card{position:relative}
+    .infoCard .closeX{
+      position:absolute; top:10px; right:10px; width:28px; height:28px; display:grid; place-items:center; border-radius:50%;
+      background:#0f1220; border:1px solid #2a2f40; cursor:pointer;
+    }
+    @media (max-width:700px){
+      .box{height:70px; font-size:20px}
+      .keepBox{width:100px; height:80px; font-size:24px}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <span class="badge">Schluck-Edition</span>
+        <h1>Deal or No Deal</h1>
+      </div>
+      <div class="info" id="infoBtn" title="Spielanleitung"></div>
+    </header>
+
+    <!-- Info Popup -->
+    <div class="infoCard" id="infoCard">
+      <div class="card">
+        <div class="closeX" id="infoClose">✕</div>
+        <h3>Spielanleitung (kurz)</h3>
+        <p class="muted">
+          Trage deinen Namen ein und wähle deine eigene Box. Öffne pro Runde die geforderte Anzahl anderer Boxen, um deren Inhalt aufzudecken
+          (sie gelten nicht für dich). Nach jeder Runde macht die „Bank“ ein Angebot in Schlücken:
+          <span class="pill">Trinken = schlecht</span>, <span class="pill">Verteilen = gut</span>.
+          Lehnst du ab, geht es weiter zur nächsten Runde. Am Ende darfst du deine Box einmalig tauschen.
+        </p>
+      </div>
+    </div>
+
+    <!-- Start -->
+    <section class="card start" id="startCard">
+      <label for="playerName">Spielername</label>
+      <div class="row">
+        <input type="text" id="playerName" placeholder="z. B. Alex" />
+        <button class="primary" id="startBtn">Weiter →</button>
+      </div>
+    </section>
+
+    <!-- Game -->
+    <section id="gameSection" style="display:none">
+      <div class="card stage">
+        <div class="statusbar">
+          <div>
+            <div class="muted">Spieler</div>
+            <div id="playerNameOut" style="font-weight:700"></div>
+          </div>
+          <div>
+            <div class="muted">Runde</div>
+            <div id="roundOut" style="font-weight:700">–</div>
+          </div>
+          <div class="right">
+            <button id="restartBtn" class="ghost">Neues Spiel</button>
+          </div>
+        </div>
+
+        <div class="valuesPanel" id="valuesPanel"></div>
+
+        <div class="grid" id="grid"></div>
+
+        <div class="youKeep" id="youKeep">
+          <div class="muted" id="keepHint">Wähle zuerst DEINE Box</div>
+        </div>
+
+        <div class="swap" id="swapRow" style="display:none">
+          <button id="swapBtn" title="Mit der letzten fremden Box tauschen">🔄 Box tauschen</button>
+          <button id="openOthersBtn" class="ghost" title="Ohne Tausch weiter">Andere Box öffnen</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Floating Offer summary -->
+    <div class="floating-offer" id="floatingOffer"></div>
+
+    <!-- Modal -->
+    <div class="modalBackdrop" id="modal">
+      <div class="modal" role="dialog" aria-modal="true">
+        <h3 id="modalTitle">Titel</h3>
+        <div id="modalBody" class="muted"></div>
+        <div class="actions" id="modalActions"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /***************
+     * Daten & Setup
+     ***************/
+    const SHOT_EQ = 6;     // 1 Shot = 6 Schlücke
+    const AUF_EX_EQ = 12;  // auf Ex = 12 Schlücke
+
+    // Preis-Liste (16 Werte), original Label + numerischer Wert (trinken=+, verteilen=-)
+    const PRICE_LIST = [
+      // Verteile (gut) → negativ
+      { label:"Verteile 1 Schluck", type:"verteil", value:-1 },
+      { label:"Verteile 2 Schlücke", type:"verteil", value:-2 },
+      { label:"Verteile 3 Schlücke", type:"verteil", value:-3 },
+      { label:"Verteile 4 Schlücke", type:"verteil", value:-4 },
+      { label:"Verteile 5 Schlücke", type:"verteil", value:-5 },
+      { label:"Verteile 7 Schlücke", type:"verteil", value:-7 },
+      { label:"Verteile 10 Schlücke", type:"verteil", value:-10 },
+      { label:"Verteile 1 Shot", type:"verteil", value:-SHOT_EQ },
+
+      // Trinke (schlecht) → positiv
+      { label:"Trinke 1 Schluck", type:"trink", value:+1 },
+      { label:"Trinke 2 Schlücke", type:"trink", value:+2 },
+      { label:"Trinke 3 Schlücke", type:"trink", value:+3 },
+      { label:"Trinke 5 Schlücke", type:"trink", value:+5 },
+      { label:"Trinke 7 Schlücke", type:"trink", value:+7 },
+      { label:"Trinke 10 Schlücke", type:"trink", value:+10 },
+      { label:"Trinke 1 Shot", type:"trink", value:+SHOT_EQ },
+      { label:"Trinke auf Ex", type:"trink", value:+AUF_EX_EQ },
+    ];
+
+    // Runden-Plan: 5 / 4 / 2 / 2 / 1  (danach Finale (2 übrig) → Tauschphase)
+    const ROUND_OPEN_COUNTS = [5, 4, 2, 2, 1];
+
+    // Angebots-Parameter (steigend verlockend)
+    const GENEROSITY_G = [-0.20, -0.10, 0.00, +0.05, +0.10, +0.12]; // 6 Stufen (inkl. Finale)
+    const ALPHA_R       = [ 0.30,  0.25, 0.20,  0.15,  0.10,  0.05];
+
+    const THRESHOLD = 15; // |Wert| ab dem "hoch"
+
+    /***************
+     * State
+     ***************/
+    let state = {
+      player: "",
+      deck: [],              // [{box:1..16, label, value, opened:false, isYours:false}]
+      yourBoxId: null,
+      roundIndex: 0,         // 0..4 nach Angeboten; Finale hat Index 5 für die Angebotsformel
+      openedThisRound: 0,
+      phase: "choose",       // "choose" | "open" | "offer" | "swap" | "end"
+      dealTaken: null,       // number (signed) falls Deal
+    };
+
+    /***************
+     * Utils
+     ***************/
+    const $ = sel => document.querySelector(sel);
+    const el = (tag, cls, html) => { const e=document.createElement(tag); if(cls) e.className=cls; if(html!=null) e.innerHTML=html; return e; };
+    function shuffle(arr){ const a=[...arr]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
+
+    function plural(n, s1="Schluck", s2="Schlücke"){ return Math.abs(n)===1 ? s1 : s2; }
+
+    function fmtOffer(u){
+      if(u>=0) return `${u} ${plural(u) } trinken`;
+      return `${Math.abs(u)} ${plural(Math.abs(u))} verteilen`;
+    }
+
+    function computeEV(values){
+      if(values.length===0) return 0;
+      return values.reduce((a,b)=>a+b,0)/values.length;
+    }
+    function computeStd(values){
+      if(values.length===0) return 0;
+      const ev = computeEV(values);
+      const varPop = values.reduce((s,v)=>s+(v-ev)*(v-ev),0)/values.length;
+      return Math.sqrt(varPop);
+    }
+
+    function offerForRemaining(remVals, stepIndex){ // stepIndex: 0..5 (5 = Finale)
+      if(remVals.length===0) return 0;
+      const ev  = computeEV(remVals);
+      const sig = computeStd(remVals);
+      const highCount = remVals.filter(v => Math.abs(v) >= THRESHOLD).length;
+      const T = Math.sqrt(highCount / remVals.length); // Tail-Gewicht
+      const g = GENEROSITY_G[stepIndex];
+      const a = ALPHA_R[stepIndex];
+
+      let offer;
+      if(ev >= 0){
+        offer = ev * (1 - g) + a * (sig * T);
+      }else{
+        offer = ev * (1 + g) - a * (sig * T);
+      }
+
+      // Caps/Rounding getrennt nach Vorzeichen
+      // maxPos = 95% des höchsten >=0 Restwerts
+      const posVals = remVals.filter(v => v >= 0);
+      const negVals = remVals.filter(v => v < 0).map(v=>Math.abs(v));
+      let maxPos = posVals.length ? Math.max(...posVals) : 0;
+      let maxNegAbs = negVals.length ? Math.max(...negVals) : 0;
+
+      // Runden auf ganze Schlücke
+      offer = Math.round(offer);
+
+      if(offer >= 0){
+        let cap = Math.ceil(0.95 * maxPos);
+        if(!isFinite(cap)) cap = offer;
+        if(offer > cap) offer = cap;
+        if(offer < 0) offer = 0;
+      }else{
+        let capNeg = -Math.ceil(0.95 * maxNegAbs);
+        if(!isFinite(capNeg)) capNeg = offer;
+        if(offer < capNeg) offer = capNeg;
+        if(offer > 0) offer = 0;
+      }
+
+      // Mindest-Progress: mind. ±1 Unterschied ggü. letzter Offerrunde (optional)
+      // (Hier weggelassen, weil die Kurve bereits steigt.)
+
+      return offer;
+    }
+
+    function remainingValues(){
+      return state.deck.filter(c=>!c.opened && !c.isYours).map(c=>c.value).concat(
+             state.yourBoxId!=null && !state.deck.find(c=>c.box===state.yourBoxId).opened ? [ state.deck.find(c=>c.box===state.yourBoxId).value ] : []);
+    }
+
+    function updateRoundLabel(){
+      const totalOpened = state.deck.filter(c=>c.opened && !c.isYours).length;
+      const r = state.roundIndex < ROUND_OPEN_COUNTS.length ? state.roundIndex+1 : "Finale";
+      $('#roundOut').textContent = `${r} (${totalOpened}/14 geöffnet)`;
+    }
+
+    function renderValuesPanel(){
+      const panel = $('#valuesPanel');
+      panel.innerHTML = '';
+      // Zeige alle 16 Werte als Liste mit "gone" für bereits aufgedeckte
+      // Sortiere nach numerischem Wert (erst verteilen, dann trinken)
+      const sorted = [...PRICE_LIST].sort((a,b)=>a.value-b.value);
+      for(const p of sorted){
+        const wasRevealed = state.deck.some(c=>c.label===p.label && c.opened);
+        const dv = el('div', 'val'+(wasRevealed?' gone':''), `${p.label}`);
+        panel.appendChild(dv);
+      }
+    }
+
+    function showModal(title, htmlBody, actions){
+      $('#modalTitle').textContent = title;
+      $('#modalBody').innerHTML = htmlBody;
+      const act = $('#modalActions');
+      act.innerHTML = '';
+      for(const a of actions){
+        const b = el('button', a.className||'', a.label);
+        b.addEventListener('click', a.onClick);
+        act.appendChild(b);
+      }
+      $('#modal').style.display = 'flex';
+    }
+    function closeModal(){ $('#modal').style.display = 'none'; }
+
+    function showInfoCard(show=true){ $('#infoCard').style.display = show ? 'block' : 'none'; }
+
+    function renderGrid(){
+      const grid = $('#grid'); grid.innerHTML = '';
+      state.deck.forEach(card=>{
+        const b = el('div','box', card.box);
+        if(card.opened) b.classList.add('opened');
+        if(state.phase==='choose'){
+          // alle klickbar
+        }else{
+          // in Runden nicht klickbar: eigene Box
+          if(card.isYours) b.classList.add('disabled');
+          // bereits geöffnete deaktiviert
+          if(card.opened) b.classList.add('disabled');
+          // während Angebot / Swap gesperrt
+          if(state.phase==='offer' || state.phase==='swap' || state.phase==='end') b.classList.add('disabled');
+        }
+        b.addEventListener('click', ()=>onBoxClick(card.box));
+        grid.appendChild(b);
+      });
+    }
+
+    function renderKeepArea(){
+      const area = $('#youKeep'); area.innerHTML = '';
+      if(state.yourBoxId==null){
+        area.appendChild(el('div','muted', 'Wähle zuerst DEINE Box'));
+        return;
+      }
+      const keep = el('div','keepBox', state.yourBoxId);
+      area.appendChild(keep);
+    }
+
+    function updateUI(){
+      $('#playerNameOut').textContent = state.player || '–';
+      updateRoundLabel();
+      renderValuesPanel();
+      renderGrid();
+      renderKeepArea();
+    }
+
+    function resetGame(){
+      state = {
+        player: "",
+        deck: [],
+        yourBoxId: null,
+        roundIndex: 0,
+        openedThisRound: 0,
+        phase: "choose",
+        dealTaken: null,
+      };
+      $('#startCard').style.display = 'grid';
+      $('#gameSection').style.display = 'none';
+      $('#floatingOffer').style.display = 'none';
+      showInfoCard(false);
+    }
+
+    /***************
+     * Game Flow
+     ***************/
+    function startGame(name){
+      state.player = name?.trim() || 'Spieler';
+      // Deck bauen: mischen & 1..16 zuweisen
+      const shuffled = shuffle(PRICE_LIST);
+      state.deck = shuffled.map((p, idx)=>({
+        box: idx+1,
+        label: p.label,
+        value: p.value,
+        opened: false,
+        isYours: false
+      }));
+      state.phase = "choose";
+      $('#startCard').style.display = 'none';
+      $('#gameSection').style.display = 'block';
+      updateUI();
+    }
+
+    function onBoxClick(boxId){
+      if(state.phase==='choose'){
+        chooseYourBox(boxId);
+        return;
+      }
+      if(state.phase!=='open') return;
+
+      const mustOpen = ROUND_OPEN_COUNTS[state.roundIndex] - state.openedThisRound;
+      const card = state.deck.find(c=>c.box===boxId);
+      if(!card || card.isYours || card.opened) return;
+
+      // Öffnen
+      card.opened = true;
+      state.openedThisRound++;
+      revealCard(card);
+
+      // nach Öffnen ggf. Angebot triggern
+      if(state.openedThisRound >= ROUND_OPEN_COUNTS[state.roundIndex]){
+        // Angebot nach kurzer „Verschnaufpause“
+        setTimeout(()=>makeOffer(), 250);
+      }
+      updateUI();
+    }
+
+    function chooseYourBox(boxId){
+      const card = state.deck.find(c=>c.box===boxId);
+      if(!card) return;
+      card.isYours = true;
+      state.yourBoxId = boxId;
+      state.phase = "open";
+      state.openedThisRound = 0;
+      flashFloating(`Deine Box ist <b>#${boxId}</b>. Öffne <b>${ROUND_OPEN_COUNTS[state.roundIndex]}</b> andere Boxen.`);
+      updateUI();
+    }
+
+    function revealCard(card){
+      // Markiere Wert in Panel via opened-Flag (bereits gesetzt)
+      const body = `
+        <div class="pill">Box #${card.box}</div>
+        <p style="margin-top:8px;font-size:18px"><b>${card.label}</b></p>
+        <p class="muted">Dieser Inhalt gilt <b>nicht</b> für dich.</p>
+      `;
+      showModal("Box geöffnet", body, [{label:"OK", className:"primary", onClick:()=>closeModal()}]);
+    }
+
+    function makeOffer(){
+      state.phase = "offer";
+
+      // Schrittindex für Angebot (0..5)
+      const isFinal = isFinalPhaseSoon();
+      const stepIndex = isFinal ? 5 : state.roundIndex; // Finale = 5
+
+      const rem = remainingValues();
+      const offer = offerForRemaining(rem, stepIndex);
+
+      // Floating Box zeigen
+      $('#floatingOffer').style.display = 'block';
+      $('#floatingOffer').innerHTML = `<b>Angebot:</b> ${fmtOffer(offer)}`;
+
+      // Modal
+      const body = `
+        <p>Die Bank macht dir ein Angebot:</p>
+        <p style="font-size:22px;margin:.4em 0"><b>${fmtOffer(offer)}</b></p>
+        <p class="muted">Deal annehmen oder ablehnen?</p>
+      `;
+      showModal("Deal oder No Deal?", body, [
+        {label:"Deal", className:"primary", onClick:()=>{ closeModal(); onDeal(offer); }},
+        {label:"No Deal", onClick:()=>{ closeModal(); onNoDeal(); }},
+      ]);
+    }
+
+    function onDeal(offer){
+      state.dealTaken = offer;
+      state.phase = "end";
+      $('#floatingOffer').style.display = 'none';
+
+      const body = `
+        <p>Du nimmst den Deal: <span class="${offer>=0?'lose':'win'}"><b>${fmtOffer(offer)}</b></span></p>
+        <p class="muted">Zum Vergleich öffnen wir nun deine Box.</p>
+      `;
+      showModal("Deal!", body, [
+        {label:"Weiter", className:"primary", onClick:()=>{ closeModal(); revealYourBoxEnd(); }}
+      ]);
+    }
+
+    function onNoDeal(){
+      $('#floatingOffer').style.display = 'none';
+      // Nächste Phase
+      if(isFinalPhaseSoon()){
+        // 2 Boxen übrig (deine + 1) → Tausch
+        state.phase = "swap";
+        showSwapRow();
+      }else{
+        // nächste Runde
+        state.roundIndex++;
+        state.openedThisRound = 0;
+        state.phase = "open";
+        flashFloating(`Kein Deal! Öffne <b>${ROUND_OPEN_COUNTS[state.roundIndex]}</b> weitere Box(en).`);
+        updateUI();
+      }
+    }
+
+    function isFinalPhaseSoon(){
+      // Finale = wenn nach aktueller Runde nur noch 2 Boxen insgesamt übrig sind (deine + 1 andere)
+      const unopenedOthers = state.deck.filter(c=>!c.opened && !c.isYours).length;
+      // In unserem Flow rufen wir makeOffer() direkt nach Rundenabschluss – prüfen danach:
+      // „Finale“ für Angebots-Formel, wenn insgesamt 2 Boxen verbleiben
+      const yoursOpen = state.deck.find(c=>c.isYours)?.opened ? 1 : 0;
+      const totalRemaining = unopenedOthers + (yoursOpen?0:1);
+      return totalRemaining <= 2;
+    }
+
+    function showSwapRow(){
+      updateUI();
+      $('#swapRow').style.display = 'flex';
+      const unopenedOthers = state.deck.filter(c=>!c.opened && !c.isYours);
+      const other = unopenedOthers[0];
+      const msg = other ? `Letzte fremde Box ist #${other.box}.` : '';
+      flashFloating(`Finale! ${msg} Du kannst tauschen oder erst die andere Box öffnen.`);
+    }
+
+    // Swap / Open others / reveal sequence
+    $('#swapBtn').addEventListener('click', ()=>{
+      if(state.phase!=='swap') return;
+      const other = state.deck.find(c=>!c.opened && !c.isYours);
+      if(!other) return;
+      const yours = state.deck.find(c=>c.isYours);
+      // Tausche Markierung (IDs bleiben gleich – wir tauschen "isYours")
+      other.isYours = true; yours.isYours = false;
+      state.yourBoxId = other.box;
+      flashFloating(`Getauscht! Deine Box ist jetzt #${state.yourBoxId}.`);
+      updateUI();
+    });
+
+    $('#openOthersBtn').addEventListener('click', ()=>{
+      if(state.phase!=='swap') return;
+      const other = state.deck.find(c=>!c.opened && !c.isYours);
+      if(!other) return;
+      other.opened = true;
+      revealCard(other);
+      // danach eigene öffnen
+      setTimeout(()=>revealYourBoxEnd(), 250);
+      updateUI();
+    });
+
+    function revealYourBoxEnd(){
+      // falls Deal schon genommen → nur Vergleichsanzeige + Neustart
+      const yours = state.deck.find(c=>c.isYours);
+      if(!yours.opened){
+        yours.opened = true;
+        const comp = state.dealTaken==null ? '' :
+          `<p class="muted">Dein Deal war: <b>${fmtOffer(state.dealTaken)}</b></p>`;
+        const body = `
+          <div class="pill">Deine Box #${yours.box}</div>
+          <p style="margin-top:8px;font-size:18px"><b>${yours.label}</b></p>
+          ${comp}
+          <p style="margin-top:8px" class="muted">Neues Spiel?</p>
+        `;
+        showModal("Finale Auflösung", body, [
+          {label:"Neues Spiel", className:"primary", onClick:()=>{ closeModal(); resetGame(); }}
+        ]);
+      }else{
+        // bereits offen (z. B. nach Deal-Vergleich)
+        showModal("Neues Spiel?", `<p class="muted">Noch eine Runde?</p>`, [
+          {label:"Neues Spiel", className:"primary", onClick:()=>{ closeModal(); resetGame(); }}
+        ]);
+      }
+      state.phase = "end";
+      $('#swapRow').style.display = 'none';
+      $('#floatingOffer').style.display = 'none';
+    }
+
+    function flashFloating(html){
+      const f = $('#floatingOffer');
+      f.innerHTML = html;
+      f.style.display = 'block';
+      // auto-hide nach 3.5s
+      setTimeout(()=>{ f.style.display = 'none'; }, 3500);
+    }
+
+    /***************
+     * Events (Start/Info/Restart)
+     ***************/
+    $('#startBtn').addEventListener('click', ()=>{
+      const name = $('#playerName').value;
+      startGame(name);
+    });
+    $('#restartBtn').addEventListener('click', ()=> resetGame());
+
+    $('#infoBtn').addEventListener('click', ()=> showInfoCard(true));
+    $('#infoClose').addEventListener('click', ()=> showInfoCard(false));
+
+    // ESC schließt Modal
+    document.addEventListener('keydown', (e)=>{
+      if(e.key==='Escape'){
+        closeModal();
+        showInfoCard(false);
+      }
+    });
+
+    // Init
+    resetGame();
+  </script>
+</body>
+</html>
